@@ -127,7 +127,8 @@ ExpressBrute.prototype.getMiddleware = function (options) {
 					this.store.set(key, {
 						count: count+1,
 						lastRequest: new Date(this.now()),
-						firstRequest: new Date(firstRequestTime)
+						firstRequest: new Date(firstRequestTime),
+						ip: req.ip,
 					}, remainingLifetime, _.bind(function (err) {
 						if (err) {
 							this.options.handleStoreError({
