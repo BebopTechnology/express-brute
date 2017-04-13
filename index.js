@@ -94,9 +94,11 @@ ExpressBrute.prototype.getMiddleware = function (options) {
 				var count = 0,
 					delay = 0,
 					lastValidRequestTime = this.now(),
-					firstRequestTime = lastValidRequestTime;
+					firstRequestTime = lastValidRequestTime,
+					blockUntilReset = false;
 				if (value) {
 					count = value.count;
+					blockUntilReset = value.blockUntilReset;
 					lastValidRequestTime = value.lastRequest.getTime();
 					firstRequestTime = value.firstRequest.getTime();
 
@@ -123,12 +125,17 @@ ExpressBrute.prototype.getMiddleware = function (options) {
 					}
 				}
 
-				if (nextValidRequestTime <= this.now() || count <= this.options.freeRetries) {
+				if ((nextValidRequestTime <= this.now() || count <= this.options.freeRetries) && !blockUntilReset) {
+					var shouldBlock = false;
+					if (count === this.options.freeRetries) {
+						shouldBlock = true;
+					}
 					this.store.set(key, {
 						count: count+1,
 						lastRequest: new Date(this.now()),
 						firstRequest: new Date(firstRequestTime),
 						ip: req.ip,
+						blockUntilReset: shouldBlock,
 					}, remainingLifetime, _.bind(function (err) {
 						if (err) {
 							this.options.handleStoreError({
@@ -144,7 +151,7 @@ ExpressBrute.prototype.getMiddleware = function (options) {
 					},this));
 				} else {
 					var failCallback = getFailCallback();
-					typeof failCallback === 'function' && failCallback(req, res, next, new Date(nextValidRequestTime));
+					typeof failCallback === 'function' && failCallback(req, res, next, new Date(nextValidRequestTime), blockUntilReset);
 				}
 			}, this));
 		},this));
